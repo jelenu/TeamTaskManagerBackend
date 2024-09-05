@@ -153,4 +153,9 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DJOSER = {
     'SEND_ACTIVATION_EMAIL': True,
     "ACTIVATION_URL": 'auth/users/activation/{uid}/{token}', 
+    'SERIALIZERS': {
+        'user_create': 'users.serializers.CustomUserCreateSerializer',
+    },
 }
+
+AUTH_USER_MODEL = 'users.CustomUser'
