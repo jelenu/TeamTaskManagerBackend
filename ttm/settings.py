@@ -154,9 +154,12 @@ REST_FRAMEWORK = {
 #EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
+DOMAIN = ('localhost:3000') 
+SITE_NAME = ('TeamTaskManager') 
+
 DJOSER = {
     'SEND_ACTIVATION_EMAIL': True,
-    "ACTIVATION_URL": 'auth/users/activation/{uid}/{token}', 
+    "ACTIVATION_URL": 'email_activation/{uid}/{token}', 
     'SERIALIZERS': {
         'user_create': 'users.serializers.CustomUserCreateSerializer',
     },
