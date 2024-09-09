@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'djoser',
     'rest_framework_simplejwt',
+    'corsheaders',
 
     'users',
 
@@ -60,6 +61,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    'corsheaders.middleware.CorsMiddleware',
+
 ]
 
 ROOT_URLCONF = 'ttm.urls'
@@ -159,3 +163,9 @@ DJOSER = {
 }
 
 AUTH_USER_MODEL = 'users.CustomUser'
+
+
+CORS_ALLOWED_ORIGINS = [
+
+"http://localhost:3000",
+]
