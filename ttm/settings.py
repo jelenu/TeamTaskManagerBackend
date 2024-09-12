@@ -37,6 +37,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -48,6 +50,8 @@ INSTALLED_APPS = [
     'djoser',
     'rest_framework_simplejwt',
     'corsheaders',
+
+    'channels',
 
     'users',
     'taskboard',
@@ -86,7 +90,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'ttm.wsgi.application'
+ASGI_APPLICATION = 'ttm.asgi.application'
 
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('135.125.107.195', 6379)],
+        },
+    },
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
