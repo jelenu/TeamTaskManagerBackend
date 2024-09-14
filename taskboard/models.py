@@ -5,7 +5,6 @@ User = get_user_model()
 
 class Board(models.Model):
     name = models.CharField(max_length=100)
-    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_boards')
     users = models.ManyToManyField(User, through='BoardAccess')
 
 class BoardAccess(models.Model):

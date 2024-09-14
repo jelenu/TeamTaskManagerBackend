@@ -8,6 +8,7 @@ urlpatterns = [
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.jwt')),
     path('auth/users/activation/<str:uid>/<str:token>/', UserActivationView.as_view()),
+    path('taskboard/', include('taskboard.urls')),
 
 ]
 

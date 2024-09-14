@@ -3,7 +3,7 @@ from .models import Board, BoardAccess, List, Task, Comment
 
 @admin.register(Board)
 class BoardAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'creator')
+    list_display = ('id', 'name')
     search_fields = ('name',)
 
 @admin.register(BoardAccess)

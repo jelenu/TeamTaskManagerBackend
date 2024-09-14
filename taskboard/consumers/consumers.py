@@ -4,7 +4,7 @@ from django.contrib.auth.models import AnonymousUser
 from rest_framework.exceptions import AuthenticationFailed
 from .authentication import validate_jwt_token, get_user, user_has_access
 from .board_utils import get_board_lists
-
+from channels.generic.websocket import AsyncWebsocketConsumer
 class BoardConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         # Initialize room_group_name with a default value
@@ -91,4 +91,61 @@ class BoardConsumer(AsyncWebsocketConsumer):
         # Send the message to WebSocket
         await self.send(text_data=json.dumps({
             'action': action,
+        }))
+
+
+
+
+
+class NotificationConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # Initialize room_group_name with a default value
+        self.user_group_name = None
+
+        # Get the JWT token from the cookies
+        token = self.scope['cookies'].get('accessToken')
+
+        if not token:
+            await self.close()
+            return
+
+        # Validate the JWT token and authenticate the user
+        try:
+            decoded_data = validate_jwt_token(token)
+            user = await get_user(decoded_data['user_id'])
+            if user == AnonymousUser():
+                await self.close()
+                return
+        except AuthenticationFailed:
+            # If authentication fails, close the connection
+            await self.close()
+            return
+
+        self.scope['user'] = user
+        self.user_group_name = f'user_{user.id}'
+
+        # Join the user's notification group
+        await self.channel_layer.group_add(
+            self.user_group_name,
+            self.channel_name
+        )
+
+        # Accept the WebSocket connection
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        if self.user_group_name:
+            # Leave the user's notification group
+            await self.channel_layer.group_discard(
+                self.user_group_name,
+                self.channel_name
+            )
+
+    async def notify_user(self, event):
+        message = event['message']
+
+        # Send the notification message to WebSocket
+        await self.send(text_data=json.dumps({
+            'type': 'notification',
+            'message': message
         }))
