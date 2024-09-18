@@ -3,8 +3,10 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.exceptions import AuthenticationFailed
 from .authentication import validate_jwt_token, get_user, user_has_access
-from .board_utils import get_board_lists
-from channels.generic.websocket import AsyncWebsocketConsumer
+from .board_utils import get_board_lists, get_board_users
+from taskboard.models import Board, List
+from channels.db import database_sync_to_async
+
 class BoardConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         # Initialize room_group_name with a default value
@@ -50,11 +52,15 @@ class BoardConsumer(AsyncWebsocketConsumer):
         # Accept the WebSocket connection
         await self.accept()
 
-        # Send lists to the user
+        # Send lists and users to the user
         lists = await get_board_lists(self.board_id)
+        users, user_role = await get_board_users(self.board_id, user)
+
         await self.send(text_data=json.dumps({
-            'type': 'initial_lists',
-            'lists': lists
+            'type': 'initial_data',
+            'lists': lists,
+            'users': users,
+            'role': user_role
         }))
 
     async def disconnect(self, close_code):
@@ -75,26 +81,60 @@ class BoardConsumer(AsyncWebsocketConsumer):
         text_data_json = json.loads(text_data)
         action = text_data_json['action']
 
-        # Send the message to all users in the group
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'board_update',
-                'action': action,
-            }
-        )
+        if action == 'create_list':
+            # Get the data for the new list
+            list_name = text_data_json.get('name')
 
-    # Receive a message from the group
+            if not list_name:
+                return
+
+            # Create the new list in the database
+            new_list = await self.create_list(list_name, self.board_id, self.scope['user'])
+
+            # If the list was successfully created, propagate the event to all users
+            if new_list:
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'board_update',
+                        'action': 'new_list',
+                        'list': {
+                            'id': new_list.id,
+                            'name': new_list.name,
+                            'order': new_list.order
+                        }
+                    }
+                )
+
     async def board_update(self, event):
         action = event['action']
 
-        # Send the message to WebSocket
-        await self.send(text_data=json.dumps({
-            'action': action,
-        }))
+        # Check if it's a new list action
+        if action == 'new_list':
+            list_data = event['list']
 
+            # Send the new list data to the connected users
+            await self.send(text_data=json.dumps({
+                'action': 'new_list',
+                'list': list_data
+            }))
 
+    async def create_list(self, name, board_id, user):
+        board = await database_sync_to_async(Board.objects.get)(id=board_id)
 
+        # Check if the user has access to the board
+        if not await user_has_access(board.id, user):
+            return None
+
+        # Create the list in the database
+        last_order = await database_sync_to_async(List.objects.filter(board=board).count)()
+        new_list = await database_sync_to_async(List.objects.create)(
+            name=name,
+            board=board,
+            order=last_order + 1
+        )
+
+        return new_list
 
 
 class NotificationConsumer(AsyncWebsocketConsumer):
